@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="codingSoundFavicon.ico" />
+
+    <title>My Music Box</title>
+
+    <!--import Tone.js, link found here: https://cdnjs.com/libraries/tone-->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.min.js"></script>
+
+    <!--import the webpage's stylesheet-->
+    <link rel="stylesheet" href="style.css" />
+
+
+</head>
+
+<body>
+    <!-- this is the start of content -->
+    <h1>My Music Box</h1>
+
+    
+    <p>
+        Play Speed Slider (Reverse to 2x Play Speed)
+    </p>
+
+    <p> 
+    <!--creates slider, from -2 to 2, incrementing 0.25, defaulting to 0-->
+    <input type="range" id="playRate" min="-2" max="2" step="0.25" value="0" style="width: 270px;">
+    </p>
+    <br />
+
+    <div>
+        <div>
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <!-- Row 1 Dropdown -->
+            <select id="Row1Type">
+                <option value="sine">sine</option>
+                <option value="square">square</option>
+                <option value="triangle">triangle</option>
+                <option value="sawtooth">sawtooth</option>
+            </select>
+        </div>
+        <br />
+        <div>
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <!-- Row 2 Dropdown -->
+            <select id="Row2Type">
+                <option value="sine">sine</option>
+                <option value="square">square</option>
+                <option value="triangle">triangle</option>
+                <option value="sawtooth">sawtooth</option>
+            </select>
+        </div>
+        <br />
+        <div>
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <!-- Row 3 Dropdown -->
+            <select id="Row3Type">
+                <option value="sine">sine</option>
+                <option value="square">square</option>
+                <option value="triangle">triangle</option>
+                <option value="sawtooth">sawtooth</option>
+            </select>
+        </div>
+        <br />
+        <div>
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <input type="checkbox" />
+            <!-- Row 4 Dropdown -->
+            <select id="Row4Type">
+                <option value="sine">sine</option>
+                <option value="square">square</option>
+                <option value="triangle">triangle</option>
+                <option value="sawtooth">sawtooth</option>
+            </select>
+        </div>
+       
+    </div>
+    <br />
+    <p>
+        Pitch Slider
+    </p>
+
+    <!--creates slider, from 1 to 5, incrementing 0.1, defaulting to 3 (with some style)-->
+    <input type="range" id="pitchShift" min="1" max="5" step="0.1" value="3" style="width: 270px;">
+
+    <br />
+
+    <p>
+Distortion:
+    </p>
+<!--radio buttons control cheby-->
+
+<div style="display:flex; gap:12px; align-items:center;">
+    <label><input type="radio" name="order" value="1" checked> None</label>
+    <label><input type="radio" name="order" value="10"> Type 1</label>
+    <label><input type="radio" name="order" value="19"> Type 2</label>
+</div>
+
+
+
+
+    <br />
+    <br />
+
+    <!--JAVASCRIPT-->
+
+    <script>
+
+        /* 
+        STEP SEQUENCER
+        * Based on: https://www.youtube.com/watch?v=Dxxkma4F-oA
+        * Discover: 
+        ** 1: Oscillators are sound wave generators and these waves can have different shapes. Read up about them: https://www.perfectcircuit.com/signal/difference-between-waveforms and maybe try one we're not using, below
+        ** 2. IMPORTANT Gain refers the magnitude of a signal, note that we're using Tone.Gain and setting it to 0.2 (it goes from 0 to 1) WHEN USING CERTAIN OSCILLATORS (SQUARE, FOR INSTANCE) SET GAIN LOW - otherwise you may damage user speakers or hurt their ears!
+        * Challenge: take out the filters or change them, choose different notes, use different synths
+        */
+
+        //SETUP SOME EFFECTS
+
+        // Chorus
+        const chorus = new Tone.Chorus({
+        frequency: 4,
+        delayTime: 2.5,
+        depth: 0.7,
+        wet: 0.45
+        }).start();
+
+        // PingPongDelay
+        const pingPong = new Tone.PingPongDelay({
+        delayTime: "8n",
+        feedback: 0.4,
+        wet: 0.35
+        });
+
+        // JCReverb
+        const jcReverb = new Tone.JCReverb({
+        roomSize: 0.8,
+        wet: 0.45
+        });
+
+        // Chebyshev distortion 
+        let chebord = 1;
+        const cheby = new Tone.Chebyshev({
+        order: chebord,
+        oversample: "2x",
+        wet: 0 
+        });
+
+        // Stereo widener
+        const widener = new Tone.StereoWidener({
+        width: 0.9
+        });
+
+        const synths = [
+        new Tone.Synth(),
+        new Tone.Synth(),
+        new Tone.Synth(),
+        new Tone.Synth() // new 4th synth
+        ];
+
+        // Gain to control final volume
+        const gain = new Tone.Gain(0.3);
+
+        synths.forEach(s => s.connect(chorus));
+        chorus.connect(pingPong);
+        pingPong.connect(widener);
+        // jcReverb.connect(cheby);
+        // cheby.connect(widener);
+        widener.connect(gain);
+        gain.toDestination();
+
+        //create an array of sound wave types, called 'voices'
+        let voice = [
+            'triangle',
+            'sine',
+            'sawtooth',
+            'square',
+        ]
+
+        var selectedValue = document.getElementById("Row1Type").value;   
+        var selectedValue = document.getElementById("Row2Type").value;   
+        var selectedValue = document.getElementById("Row3Type").value;   
+
+        //pick a random integer between 0 and 3, inclusive 
+        let v0 = Math.floor(Math.random() * 4);
+        let v1 = Math.floor(Math.random() * 4);
+        let v2 = Math.floor(Math.random() * 4);
+
+        
+        // Get dropdowns
+        const row1 = document.getElementById("Row1Type");
+        const row2 = document.getElementById("Row2Type");
+        const row3 = document.getElementById("Row3Type");
+        const row4 = document.getElementById("Row4Type");
+
+        // function to update synth oscillator
+        function updateOscillator(rowSelect, synth) {
+            rowSelect.addEventListener("change", () => {
+                synth.oscillator.type = rowSelect.value;
+                console.log(`Synth updated to ${rowSelect.value}`);
+            });
+        }
+
+        // hook up each dropdown
+        updateOscillator(row1, synths[0]);
+        updateOscillator(row2, synths[1]);
+        updateOscillator(row3, synths[2]);
+        updateOscillator(row4, synths[3]);
+
+        // set initial values at page load
+        synths[0].oscillator.type = row1.value;
+        synths[1].oscillator.type = row2.value;
+        synths[2].oscillator.type = row3.value;
+
+        //get pitchShift
+        const slider = document.getElementById("pitchShift");
+
+        let shifter = 3;
+
+        //look at the body of the page (HTML) get all the divs that are children of divs (in our HTML we have three divs which are inside (children of) an outer div)) and apply a different note to each
+        let $rows = document.body.querySelectorAll('div > div'),
+            notes = [
+                174.6 * shifter,
+                164.8 * shifter,
+                110 * shifter,
+                220 * shifter // extra note for 4th row
+            ];
+
+            
+        //if slider value changes, update notes
+        slider.addEventListener("input", () => {
+            if (slider.value) {
+                shifter = parseFloat(slider.value);
+                notes = [
+                    174.6 * shifter,
+                    164.8 * shifter,
+                    110 * shifter,
+                    220 * shifter
+                ];
+                console.log(shifter);
+            }
+        });
+
+
+        //listen to the radio buttons and chose no distortion (1) or between an even or an odd number
+         document.querySelectorAll('input[name="order"]').forEach(radio => {
+                radio.addEventListener("change", e => {
+                    if (e.target.checked) {
+                        chebord = parseInt(e.target.value, 10);
+                        cheby.order = chebord;
+                        console.log("chebord =", chebord);
+                    }
+                });
+            });
+
+
+
+        // Play Rate Slider
+        let loopId;
+        let playDirection = 1;
+        let IDX = 0;
+        function updateLoop(rate) {
+            if (loopId) {
+                Tone.Transport.clear(loopId);
+            }
+            if (rate === 0) {
+                Tone.Transport.pause();
+                console.log("Transport paused");
+                return;
+            }
+            if (Tone.Transport.state !== "started") {
+                Tone.Transport.start();
+                console.log("Transport started");
+            }
+            playDirection = rate > 0 ? 1 : -1;
+            let interval = "8n"; 
+            let speedFactor = Math.abs(rate);
+            loopId = Tone.Transport.scheduleRepeat((time) => {
+                let step = ((IDX % 9) + 9) % 9;
+                for (let i = 0; i < $rows.length; i++) {
+                    let synth = synths[i],
+                        note = notes[i],
+                        $row = $rows[i],
+                        $input = $row.querySelector(`input:nth-child(${step + 1})`);
+                    if ($input.checked) {
+                        synth.triggerAttackRelease(note, '8n', time);
+                    }
+                }
+                IDX += playDirection;
+            }, Tone.Time(interval).toSeconds() / speedFactor);
+        }
+        const playRateSlider = document.getElementById("playRate");
+        let transportStarted = false;
+        playRateSlider.addEventListener("input", async () => {
+            let rate = parseFloat(playRateSlider.value);
+            if (!transportStarted && rate !== 0) {
+                await Tone.start(); 
+                Tone.Transport.start();
+                transportStarted = true;
+            }
+            updateLoop(rate);
+            console.log("Playback rate:", rate, "Direction:", playDirection);
+        });
+    </script>
+</body>
+</html>
