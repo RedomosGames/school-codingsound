@@ -1,1 +1,155 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Accordion Mouse</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.min.js"></script>
+  <style>
+    body {
+      height: 100vh;
+      background: #222;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    #accordion {
+      position: relative;
+      width: 600px;
+      height: 200px;
+      margin-top: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .side {
+      position: absolute;
+      top: 50%;
+      width: 120px;
+      height: 100%;
+      transform: translateY(-50%);
+      border-radius: 10px;
+    }
+
+    #left {
+      background: red;
+      left: calc(50% - 150px);
+    }
+
+    #right {
+      background: blue;
+      right: calc(50% - 150px);
+    }
+
+    #bellow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      height: 100%;
+      width: 100px;
+      background: grey;
+      border-radius: 6px;
+      transition: width 0.025s linear;
+    }
+  </style>
+</head>
+<body>
+  <button id="start">Start</button>
+
+  <div id="accordion">
+    <div id="bellow"></div>
+        <div id="left" class="side"></div>
+    <div id="right" class="side"></div>
+  </div>
+
+  <script>
+
+const master = new Tone.Gain(0.5).toDestination();
+
+// filter
+const filter = new Tone.Filter({
+  type: "lowpass",
+  frequency: 1200,
+  Q: 0.8
+});
+
+// vibrato
+const vibrato = new Tone.Vibrato({
+  frequency: 5,
+  depth: 0.15
+});
+
+// polysynth
+const synth = new Tone.PolySynth(Tone.Synth, {
+  oscillator: { type: "triangle" },
+  envelope: {
+    attack: 0.2,
+    decay: 0.3,
+    sustain: 0.9,
+    release: 0.6
+  }
+});
+
+// AUDIO CHAIN (important!)
+synth.connect(vibrato);
+vibrato.connect(filter);
+filter.connect(master);
+
+
+
+    let isPlaying = false;
+    const leftBlock = document.getElementById("left");
+    const rightBlock = document.getElementById("right");
+    const bellow = document.getElementById("bellow");
+
+
+    // Start button
+document.getElementById("start").addEventListener("click", async () => {
+  await Tone.start();
+  synth.triggerAttack(["C4"]);
+  isPlaying = true;
+  console.log("Audio started");
+});
+
+
+    // Mouse control for sound + visual
+    document.body.addEventListener("mousemove", (e) => {
+      if (!isPlaying) return;
+      // --- AUDIO ---
+      const velocity = Math.abs(e.movementX);
+      const volume = Tone.gainToDb(Math.min(velocity / 50, 1));
+      synth.volume.value = volume - 30;
+      const baseMidi = Tone.Frequency("C4").toMidi();
+     const pitch = Math.floor(baseMidi + ((window.innerHeight - e.clientY) / window.innerHeight) * 24);
+      synth.triggerAttack(Tone.Frequency(pitch, "midi"));
+
+      // --- VISUAL ---
+      const maxShift = 100;
+      const xRatio = e.clientX / window.innerWidth;
+      const shift = (xRatio - 0.5) * 2 * maxShift;
+
+      // Move left and right sides in opposite directions
+      leftBlock.style.left = `calc(50% - 150px - ${shift}px)`;
+      rightBlock.style.right = `calc(50% - 150px - ${shift}px)`;
+
+      // Adjust bellow width dynamically
+      const bellowWidth = 100 + Math.abs(shift) * 1.5;
+      bellow.style.width = `${bellowWidth}px`;
+    });
+
+/*
+    // Stop sound when leaving window
+    document.body.addEventListener("mouseleave", () => {
+      if (isPlaying) synth.triggerRelease();
+    });
+*/
+  </script>
+</body>
+</html>
