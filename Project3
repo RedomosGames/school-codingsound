@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="codingSoundFavicon.ico" />
+
+    <title>Clip Project 02</title>
+
+    <!--import Tone.js, link found here: https://cdnjs.com/libraries/tone-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.min.js"></script>
+
+    <!--import the webpage's stylesheet-->
+    <link rel="stylesheet" href="style.css" />
+
+</head>
+
+<body>
+
+    <!-- this is the start of content -->
+    <h1>Clip Player 02</h1>
+
+    <!--create a button named cow_btn-->
+    <button id="gravy-btn">Play</button>
+
+    <!--JAVASCRIPT-->
+    <script>
+
+        //SETUP SOME EFFECTS
+        //feedbackDelay
+        let fbDelay = new Tone.FeedbackDelay({
+            delayTime: 0.03,
+            feedback: 0.4,
+            wet: 0.5
+        });
+
+        //autoWah
+        const autWah = new Tone.AutoWah({
+            gain: 0.5,
+            octaves: 8,
+            sensitivity: 0.6,
+            wet: 1,
+        })
+
+        const gain = new Tone.Gain(0.5);
+
+        gain.toDestination();
+
+        //var called "playing"
+        let playing = false;
+        let strt = 1;
+        let nd = 1.6;
+        const step = 0.04; // how much to slide the window each loop
+
+
+        //gain 
+        const grangain = new Tone.Gain(0.5);
+
+        // Granular player   
+        const grain = new Tone.GrainPlayer({
+            url: "audio/brainimplant.mp3",
+            reverse: true,
+            loop: true,
+            // many short grains
+            grainSize: 0.1,     // smaller grains = more "spray"
+            // lots of overlap = thick cloud
+            overlap: 0.20,       // 0.2–0.5 is good for smear
+            // pitch-shift via rate
+            playbackRate: 1,   // < 1 = down, > 1 = up
+            // extra detune in cents
+            //detune: 600,          // try 200–1200
+
+            loopStart: strt,
+            loopEnd: nd,
+
+            onload: () => {
+                const window = nd - strt;              // size of the loop region
+                const dur = grain.buffer.duration;     // full file length (seconds)
+
+                // how long one loop takes in seconds:
+                const loopTime = window / Math.abs(grain.playbackRate);
+
+                setInterval(() => {
+                    // slide the window
+                    strt += step;
+                    nd += step;
+
+                    // wrap when we hit the end of the file
+                    if (nd > dur) {
+                        strt = 0;
+                        nd = window;
+                    }
+
+                    grain.loopStart = strt;
+                    grain.loopEnd = nd;
+                }, loopTime * 100); // ms
+            }
+        }).connect(grangain);
+
+grain.connect(fbDelay);
+fbDelay.connect(autWah);
+autWah.connect(gain);
+
+
+        /* 
+        // wait for all audio files to load
+         Tone.loaded().then(() => {
+             console.log("Audio loaded");
+         });
+         */
+
+        // attach event listeners to HTML button
+        document.getElementById("gravy-btn").addEventListener("click", async () => {
+            await Tone.start();      // unlock audio
+            await Tone.loaded();     // ensure buffer ready
+
+
+            if (!playing) {
+                grain.start();
+                playing = true;
+            } else {
+                grain.stop();
+                playing = false;
+            }
+            /*
+            grain.playbackRate = 0.5 + Math.random() * 1.0; // 0.5–1.5
+            grain.detune = (Math.random() - 0.5) * 1200;    // ±1200 cents
+            */
+        });
+    </script>
+
+</body>
+
+</html>
